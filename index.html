@@ -195,11 +195,37 @@
       <span id="authStatus" class="auth-status"></span>
     </div>
     <div class="tabs">
-      <button class="tab-btn active" data-tab="paymentsTab">Payments</button>
+      
       <button class="tab-btn" data-tab="buyersTab">Buyers</button>
-      <button class="tab-btn" data-tab="proofsTab">Proof Submissions</button>
+      <button class="tab-btn active" data-tab="paymentsTab">Payments</button>
+      <button class="tab-btn" data-tab="proofsTab">Proof Submissions(mobile)</button>
       <button class="tab-btn" data-tab="productsTab">Products</button>
+      <button class="tab-btn" data-tab="payviaupiTab">Payviaupi(onlyclick)</button>
+
     </div>
+    
+<!-- Add this after your productsTab content -->
+<div id="payviaupiTab" class="tab-content">
+  <div class="search-bar">
+    <input type="text" id="payviaupiSearch" placeholder="Search by buyer, email, product...">
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="admin-table" id="payviaupiTable">
+      <thead>
+        <tr>
+          <th>Buyer Name</th>
+          <th>Email</th>
+          <th>Product</th>
+          <th>Price</th>
+          <th>Category</th>
+          <th>Image</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
     <!-- Payments Tab -->
     <div id="paymentsTab" class="tab-content active">
       <div class="search-bar">
@@ -267,7 +293,7 @@
           <thead>
             <tr>
               <th>Email</th>
-              <th>UPI Ref</th>
+              <th>Mobile Number</th>
               <th>Screenshot</th>
               <th>Date</th>
             </tr>
@@ -367,6 +393,7 @@
       loadBuyers();
       loadProofs();
       loadProducts();
+      loadPayviaupi();
     }
     function clearAllTables() {
       document.querySelectorAll('tbody').forEach(tb => tb.innerHTML = "");
@@ -457,6 +484,27 @@
       });
     }
 
+    // --- Payviaupi Table ---
+    function loadPayviaupi() {
+      const tableBody = document.querySelector("#payviaupiTable tbody");
+      onValue(ref(db, 'Payviaupi'), snap => {
+        let rows = [];
+        snap.forEach(child => {
+          const p = child.val();
+          rows.push({
+            buyer_name: p.buyer_name || "Unknown",
+            email: p.email || "-",
+            product: p.productName || p.product_name || "-",
+            price: p.price || "-",
+            category: p.category || "-",
+            image_url: p.image_url || "",
+            date: p.timestamp ? new Date(p.timestamp).toLocaleString() : "-"
+          });
+        });
+        renderTable(tableBody, rows, "payviaupi");
+      });
+    }
+
     // --- Table Rendering & Filtering ---
     function renderTable(tbody, rows, type) {
       // Filtering
@@ -472,6 +520,8 @@
         searchVal = document.getElementById("proofsSearch").value.toLowerCase();
       } else if (type === "products") {
         searchVal = document.getElementById("productsSearch").value.toLowerCase();
+      } else if (type === "payviaupi") {
+        searchVal = document.getElementById("payviaupiSearch").value.toLowerCase();
       }
       let filtered = rows.filter(row => {
         let match = true;
@@ -553,6 +603,24 @@
           tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;">No products found.</td></tr>`;
         }
         return;
+      } else if (type === "payviaupi") {
+        filtered.forEach(r => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${r.buyer_name}</td>
+              <td>${r.email}</td>
+              <td>${r.product}</td>
+              <td>₹${r.price}</td>
+              <td>${r.category}</td>
+              <td>${r.image_url ? `<img src="${r.image_url}" style="max-width:60px;max-height:60px;border-radius:6px;">` : "N/A"}</td>
+              <td>${r.date}</td>
+            </tr>
+          `;
+        });
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#888;">No records found.</td></tr>`;
+        }
+        return;
       }
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#888;">No records found.</td></tr>`;
@@ -566,6 +634,7 @@
     document.getElementById("buyersStatusFilter").onchange = () => loadBuyers();
     document.getElementById("proofsSearch").oninput = () => loadProofs();
     document.getElementById("productsSearch").oninput = () => loadProducts();
+    document.getElementById("payviaupiSearch").oninput = () => loadPayviaupi();
 
     function capitalize(str) {
       return str.charAt(0).toUpperCase() + str.slice(1);
